@@ -8,10 +8,42 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # needed for the OIDC login to AWS
     steps:
-      - name: TODO
-        run: |
-          echo "TODO: run the tests again"
-          echo "TODO: read the version from pyproject.toml"
-          echo "TODO: log in to AWS (OIDC, no access keys) and to ECR"
-          echo "TODO: build the image, tag it with the version, push it to ECR"
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Run the tests
+        run: uv run --locked python -m unittest -v
+
+      - name: Read the version from pyproject.toml
+        id: version
+        run: echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
