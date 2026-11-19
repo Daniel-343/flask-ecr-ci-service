@@ -1,21 +1,24 @@
-# service-code
+# flask-ecr-ci-service
 
-A tiny Flask service for the DevOps CSK CI/CD workshop. Steps and hints:
-https://github.com/kohanyirobert/csk-w10-cicd
+Small Flask app for the CSK week 10 CI/CD workshop. `GET /` returns a greeting on port 8080.
 
-| file | what it is |
-|---|---|
-| `app.py` | answers `GET /` with a greeting, on port 8080 |
-| `test_app.py` | the tests |
-| `pyproject.toml`, `uv.lock` | dependencies and the **version**, the image tag |
-| `.github/workflows/pr.yml` | runs on pull requests: does nothing yet |
-| `.github/workflows/main.yml` | runs on pushes to `main`: does nothing yet |
-
-Missing, on purpose: the `Dockerfile`, and everything the workflows should do.
+## Running it
 
 ```bash
-uv run python -m unittest -v   # the tests
-uv run app.py                  # then: curl localhost:8080
-uv version                     # the version
-uv version --bump minor        # 1.0.0 -> 1.1.0
+uv run python -m unittest -v
+uv run app.py          # curl localhost:8080
+
+docker build -t hello .
+docker run -p 8080:8080 hello
+```
+
+## CI
+
+- PRs to main run the tests and build the image (no push).
+- Pushes to main run the tests, then build and push to ECR. Needs the `AWS_ROLE_ARN`, `AWS_REGION` and `ECR_REPOSITORY_URL` repo variables.
+
+The image tag is the version in pyproject.toml, it needs to be updated manually.
+
+```bash
+uv version --bump minor
 ```
